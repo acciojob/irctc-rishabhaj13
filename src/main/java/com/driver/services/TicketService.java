@@ -42,7 +42,72 @@ public class TicketService {
         //Also in the passenger Entity change the attribute bookedTickets by using the attribute bookingPersonId.
        //And the end return the ticketId that has come from db
 
-       return null;
+        Train train = trainRepository.findById(bookTicketEntryDto.getTrainId()).get();
 
+        int totalSeats = train.getNoOfSeats();
+
+        int bookings = 0;
+
+        String route = train.getRoute();
+
+        int boardingStation = route.indexOf(bookTicketEntryDto.getFromStation().toString());
+        int destinationStation = route.indexOf(bookTicketEntryDto.getToStation().toString());
+
+        for(Ticket t : train.getBookedTickets()){
+            int startStation = route.indexOf(t.getFromStation().toString());
+            int endStation = route.indexOf(t.getToStation().toString());
+
+            if((startStation < destinationStation && startStation >= boardingStation) ||
+                    (endStation > boardingStation && endStation <= destinationStation) ||
+                    (startStation <= boardingStation && endStation >= destinationStation)){
+                bookings += t.getPassengersList().size();
+            }
+        }
+        int availableSeats = totalSeats - bookings;
+
+        if(availableSeats < bookTicketEntryDto.getNoOfSeats()){
+            throw new Exception("Less tickets are available");
+        }
+
+        List<Integer> passengerIds = bookTicketEntryDto.getPassengerIds();
+        List<Passenger> passengerList = new ArrayList<>();
+        Ticket ticket = new Ticket();
+        for(Integer passengerId : passengerIds){
+            Passenger passenger = passengerRepository.findById(passengerId).get();
+            passengerList.add(passenger);
+        }
+        ticket.setPassengersList(passengerList);
+        String[] result = route.split(",");
+        int startIndex = -1;
+        for(int i=0;i<result.length;i++){
+
+            if(result[i].equals(bookTicketEntryDto.getFromStation().toString())){
+                startIndex = i;
+                break;
+            }
+        }
+        int endIndex = -1;
+        for(int i=0;i<result.length;i++)
+        {
+            if(result[i].equals(bookTicketEntryDto.getToStation().toString())){
+                endIndex = i;
+                break;
+            }
+        }
+        if(startIndex==-1 || endIndex ==-1 ){
+            throw new Exception("Invalid stations");
+        }
+
+        ticket.setTotalFare(300*(endIndex-startIndex));
+        ticket.setFromStation(bookTicketEntryDto.getFromStation());
+        ticket.setToStation(bookTicketEntryDto.getToStation());
+        ticket.setTrain(train);
+        Passenger passenger = passengerRepository.findById(bookTicketEntryDto.getBookingPersonId()).get();
+        passenger.getBookedTickets().add(ticket);
+        ticket.setTrain(train);
+        ticket = ticketRepository.save(ticket);
+        train.getBookedTickets().add(ticket);
+        train = trainRepository.save(train);
+        return ticket.getTicketId();
     }
 }
