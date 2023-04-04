@@ -51,7 +51,30 @@ public class TrainService {
         //Inshort : a train has totalNo of seats and there are tickets from and to different locations
         //We need to find out the available seats between the given 2 stations.
 
-       return null;
+        Train train = trainRepository.findById(seatAvailabilityEntryDto.getTrainId()).get();
+
+        int noOfSeats = train.getNoOfSeats();
+
+        int bookings = 0;
+
+        String route = train.getRoute();
+
+        int boardingStation = route.indexOf(seatAvailabilityEntryDto.getFromStation().toString());
+        int destinationStation = route.indexOf(seatAvailabilityEntryDto.getToStation().toString());
+
+        for(Ticket t : train.getBookedTickets()){
+            int startStation = route.indexOf(t.getFromStation().toString());
+            int endStation = route.indexOf(t.getToStation().toString());
+
+            if((startStation < destinationStation && startStation >= boardingStation) ||
+                    (endStation > boardingStation && endStation <= destinationStation) ||
+                    (startStation <= boardingStation && endStation >= destinationStation)){
+                bookings += t.getPassengersList().size();
+            }
+
+        }
+        int ans = noOfSeats - bookings;
+        return ans;
     }
 
     public Integer calculatePeopleBoardingAtAStation(Integer trainId,Station station) throws Exception{
